@@ -26,11 +26,14 @@ terraform {
 
 locals {
   username = data.coder_workspace.me.owner
+  # Get the folder of the checked out project
+  folder_name = try(element(split("/", data.coder_parameter.git_repo.value), length(split("/", data.coder_parameter.git_repo.value)) - 1), "")
 }
 
 data "coder_provisioner" "me" {
 }
 
+# Add param for the git url
 data "coder_parameter" "git_repo" {
   name         = "git_repo"
   display_name = "Git repository"
@@ -38,13 +41,10 @@ data "coder_parameter" "git_repo" {
 }
 
 provider "docker" {
+  host = "unix:///Users/michaelbrewer/.docker/run/docker.sock"
 }
 
 data "coder_workspace" "me" {
-}
-
-locals {
-  folder_name = try(element(split("/", data.coder_parameter.git_repo.value), length(split("/", data.coder_parameter.git_repo.value)) - 1), "")
 }
 
 resource "coder_agent" "main" {
@@ -53,7 +53,7 @@ resource "coder_agent" "main" {
   startup_script = <<-EOT
     set -e
 
-    # Clone repo
+    # Clone repo when needed
     if [ ! -d "${local.folder_name}" ]
     then
         git clone ${data.coder_parameter.git_repo.value}
@@ -67,10 +67,6 @@ resource "coder_agent" "main" {
     vscode_insiders = false
   }
 
-  # These environment variables allow you to make Git commits right away after creating a
-  # workspace. Note that they take precedence over configuration defined in ~/.gitconfig!
-  # You can remove this block if you'd prefer to configure Git manually or using
-  # dotfiles. (see docs/dotfiles.md)
   env = {
     GIT_AUTHOR_NAME     = coalesce(data.coder_workspace.me.owner_name, data.coder_workspace.me.owner)
     GIT_AUTHOR_EMAIL    = "${data.coder_workspace.me.owner_email}"
@@ -78,11 +74,6 @@ resource "coder_agent" "main" {
     GIT_COMMITTER_EMAIL = "${data.coder_workspace.me.owner_email}"
   }
 
-  # The following metadata blocks are optional. They are used to display
-  # information about your workspace in the dashboard. You can remove them
-  # if you don't want to display any information.
-  # For basic resources, you can use the `coder stat` command.
-  # If you need more control, you can write your own script.
   metadata {
     display_name = "CPU Usage"
     key          = "0_cpu_usage"
@@ -126,7 +117,6 @@ resource "coder_agent" "main" {
   metadata {
     display_name = "Load Average (Host)"
     key          = "6_load_host"
-    # get load avg scaled by number of cores
     script   = <<EOT
       echo "`cat /proc/loadavg | awk '{ print $1 }'` `nproc`" | awk '{ printf "%0.2f", $1/$2 }'
     EOT
@@ -145,23 +135,23 @@ resource "coder_agent" "main" {
   }
 }
 
+# Open cloned project
 module "code-server" {
   source   = "registry.coder.com/modules/code-server/coder"
   version  = "1.0.5"
   agent_id = coder_agent.main.id
-  folder = "/home/${local.username}/${local.folder_name}"
+  folder   = "/home/${local.username}/${local.folder_name}"
   settings = {
-    "workbench.colorTheme": "Visual Studio Dark"
+    "workbench.colorTheme" : "Visual Studio Dark"
+    "workbench.startupEditor" : "readme"
   }
 }
 
 resource "docker_volume" "home_volume" {
   name = "coder-${data.coder_workspace.me.id}-home"
-  # Protect the volume from being deleted due to changes in attributes.
   lifecycle {
     ignore_changes = all
   }
-  # Add labels in Docker to keep track of orphan resources.
   labels {
     label = "coder.owner"
     value = data.coder_workspace.me.owner
@@ -174,8 +164,6 @@ resource "docker_volume" "home_volume" {
     label = "coder.workspace_id"
     value = data.coder_workspace.me.id
   }
-  # This field becomes outdated if the workspace is renamed but can
-  # be useful for debugging or cleaning out dangling volumes.
   labels {
     label = "coder.workspace_name_at_creation"
     value = data.coder_workspace.me.name
@@ -198,11 +186,8 @@ resource "docker_image" "main" {
 resource "docker_container" "workspace" {
   count = data.coder_workspace.me.start_count
   image = docker_image.main.name
-  # Uses lower() to avoid Docker restriction on container names.
   name = "coder-${data.coder_workspace.me.owner}-${lower(data.coder_workspace.me.name)}"
-  # Hostname makes the shell more user friendly: coder@my-workspace:~$
   hostname = data.coder_workspace.me.name
-  # Use the docker gateway if the access URL is 127.0.0.1
   entrypoint = ["sh", "-c", replace(coder_agent.main.init_script, "/localhost|127\\.0\\.0\\.1/", "host.docker.internal")]
   env        = ["CODER_AGENT_TOKEN=${coder_agent.main.token}"]
   host {
@@ -215,7 +200,6 @@ resource "docker_container" "workspace" {
     read_only      = false
   }
 
-  # Add labels in Docker to keep track of orphan resources.
   labels {
     label = "coder.owner"
     value = data.coder_workspace.me.owner
