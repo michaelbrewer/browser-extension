@@ -4,8 +4,8 @@ import Logo from "react:./logo-mark.svg";
 
 import { useStorage } from "@plasmohq/storage/hook";
 
-import { DEFAULT_GITPOD_ENDPOINT, EVENT_CURRENT_URL_CHANGED } from "~constants";
-import { STORAGE_KEY_ADDRESS, STORAGE_KEY_ALWAYS_OPTIONS, STORAGE_KEY_NEW_TAB } from "~storage";
+import { DEFAULT_CODER_TEMPLATE, DEFAULT_GITPOD_ENDPOINT, EVENT_CURRENT_URL_CHANGED } from "~constants";
+import { STORAGE_KEY_ADDRESS, STORAGE_KEY_ALWAYS_OPTIONS, STORAGE_KEY_NEW_TAB, STORAGE_KEY_TEMPLATE } from "~storage";
 
 import type { SupportedApplication } from "./button-contributions";
 
@@ -20,6 +20,7 @@ export const GitpodButton = ({ application, additionalClassNames }: GitpodButton
     const [disableAutostart] = useStorage<boolean>(STORAGE_KEY_ALWAYS_OPTIONS, false);
     const [showDropdown, setShowDropdown] = useState(false);
     const [currentHref, setCurrentHref] = useState(window.location.href);
+    const [template] = useStorage<string>(STORAGE_KEY_TEMPLATE, DEFAULT_CODER_TEMPLATE);
 
     useEffect(() => {
         const handleUrlChange = () => {
@@ -36,15 +37,15 @@ export const GitpodButton = ({ application, additionalClassNames }: GitpodButton
     const actions = useMemo(
         () => [
             {
-                href: `${address}/?autostart=${!disableAutostart}#${currentHref}`,
-                label: "Open",
+                href: `${address}/templates/${template}/workspace?mode=${disableAutostart ? "manual" : "auto"}&param.git_repo=${currentHref}`,
+                label: "Open in Coder",
             },
             {
-                href: `${address}/?autostart=false#${currentHref}`,
+                href: `${address}/templates/${template}/workspace?mode=manual&param.git_repo=${currentHref}`,
                 label: "Open with options...",
             },
         ],
-        [address, disableAutostart, currentHref],
+        [address, template, disableAutostart, currentHref],
     );
     const dropdownRef = useRef<HTMLDivElement | null>(null);
     const firstActionRef = useRef<HTMLAnchorElement | null>(null);

@@ -10,11 +10,11 @@ import { Button } from "~components/forms/Button";
 import { CheckboxInputField } from "~components/forms/CheckboxInputField";
 import { InputField } from "~components/forms/InputField";
 import { TextInput } from "~components/forms/TextInputField";
-import { ALL_ORIGINS_WILDCARD, DEFAULT_GITPOD_ENDPOINT } from "~constants";
+import { ALL_ORIGINS_WILDCARD, DEFAULT_GITPOD_ENDPOINT, DEFAULT_CODER_TEMPLATE } from "~constants";
 import { useTemporaryState } from "~hooks/use-temporary-state";
 import {
-    STORAGE_AUTOMATICALLY_DETECT_GITPOD,
     STORAGE_KEY_ADDRESS,
+    STORAGE_KEY_TEMPLATE,
     STORAGE_KEY_ALWAYS_OPTIONS,
     STORAGE_KEY_NEW_TAB,
 } from "~storage";
@@ -29,6 +29,8 @@ function IndexPopup() {
     const [storedAddress] = useStorage<string>(STORAGE_KEY_ADDRESS, DEFAULT_GITPOD_ENDPOINT);
     const [address, setAddress] = useState<string>(storedAddress);
     const [justSaved, setJustSaved] = useTemporaryState(false, 2000);
+    const [storedTemplate] = useStorage<string>(STORAGE_KEY_TEMPLATE, DEFAULT_CODER_TEMPLATE);
+    const [template, setTemplate] = useState<string>(storedTemplate);
 
     const updateAddress = useCallback(
         (e: FormEvent) => {
@@ -57,10 +59,28 @@ function IndexPopup() {
         [address, setError],
     );
 
-    // Need to update address when storage changes. This also applies for the initial load.
+    const updateTemplate = useCallback(
+        (e: FormEvent) => {
+            e.preventDefault();
+
+            try {
+                storage
+                    .setItem(STORAGE_KEY_TEMPLATE, template)
+                    .catch((e) => {
+                        setError(e.message);
+                    });
+            } catch (e) {
+                setError(e.message);
+            }
+        },
+        [template, setError],
+    );
+
+    // Need to update address, template when storage changes. This also applies for the initial load.
     useEffect(() => {
         setAddress(storedAddress);
-    }, [storedAddress]);
+        setTemplate(storedTemplate);
+    }, [storedAddress, storedTemplate]);
 
     const [openInNewTab, setOpenInNewTab] = useStorage<boolean>(STORAGE_KEY_NEW_TAB, true);
     const [allSites, setAllSites] = useState(false);
@@ -71,11 +91,6 @@ function IndexPopup() {
         })();
     }, []);
     const [disableAutostart, setDisableAutostart] = useStorage<boolean>(STORAGE_KEY_ALWAYS_OPTIONS, false);
-
-    const [enableInstanceHopping, setEnableInstanceHopping] = useStorage<boolean>(
-        STORAGE_AUTOMATICALLY_DETECT_GITPOD,
-        true,
-    );
 
     return (
         <div
@@ -88,8 +103,8 @@ function IndexPopup() {
         >
             <form className="w-full" onSubmit={updateAddress} action="#">
                 <InputField
-                    label="Gitpod URL"
-                    hint={`Gitpod instance URL, e.g., ${DEFAULT_GITPOD_ENDPOINT}.`}
+                    label="Coder URL"
+                    hint={`Coder instance URL, e.g., ${DEFAULT_GITPOD_ENDPOINT}.`}
                     topMargin={false}
                 >
                     <div className="flex w-full max-w-sm items-center space-x-2">
@@ -99,6 +114,15 @@ function IndexPopup() {
                         </Button>
                     </div>
                 </InputField>
+                <InputField
+                    label="Template Name"
+                    hint="The workspace template to use"
+                    topMargin={false}>
+                </InputField>
+                    <div className="flex w-full max-w-sm items-center space-x-2">
+                        <TextInput value={template} onChange={setTemplate} />
+                        <Button onClick={updateTemplate} className="w-20">Save</Button>
+                    </div>
                 <CheckboxInputField
                     label="Open Workspaces in a new tab"
                     checked={openInNewTab}
@@ -128,12 +152,12 @@ function IndexPopup() {
                     checked={disableAutostart}
                     onChange={setDisableAutostart}
                 />
-                <CheckboxInputField
+                {/* <CheckboxInputField
                     label="Automatic instance hopping"
                     hint="Changes the Gitpod URL automatically when a Gitpod Dedicated instance is detected"
                     checked={enableInstanceHopping}
                     onChange={setEnableInstanceHopping}
-                />
+                /> */}
             </form>
 
             {/* show error if set  */}

@@ -1,10 +1,10 @@
 {
-    "name": "gitpod",
-    "displayName": "Gitpod",
-    "version": "2.1.7",
-    "description": "The developer platform for on-demand cloud development environments. Create software faster and more securely.",
-    "author": "Gitpod <info@gitpod.io>",
-    "homepage": "https://www.gitpod.io",
+    "name": "coder",
+    "displayName": "Coder",
+    "version": "0.0.1",
+    "description": "Your Self-Hosted Remote Development Platform.",
+    "author": "Coder <info@coder.com>",
+    "homepage": "https://coder.com/",
     "scripts": {
         "dev": "plasmo dev --source-maps --no-minify",
         "watch-dev": "pnpm build-dev-tools && .bin/watch-sync serve ./build/chrome-mv3-dev",
