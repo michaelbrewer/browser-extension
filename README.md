@@ -1,6 +1,17 @@
-# Gitpod Browser extension
+# Coder Browser extension
 
 [![Setup Automated](https://img.shields.io/badge/setup-automated-blue?logo=gitpod)](https://gitpod.io/#https://github.com/gitpod-io/browser-extension)
+
+> A HACKED/POC VERSION OF THE GITPOD EXTENSION TO SUPPORT A SELF-HOSTED CODER WORKSPACE
+
+This fork changes the logo and adds a setting for `template`, which defaults to "docker" see [Coder Templates](https://coder.com/docs/v2/latest/templates)
+
+This leverages the [Open in Coder](https://coder.com/docs/v2/latest/templates/open-in-coder) flow, but as an extension.
+
+Git url is assume to be the param `git_repo` in your template.
+
+> REST OF THE DOCS / CODE HAS NOT ADDITIONAL CHANAGES
+---
 
 This is the browser extension for Gitpod. It supports Chrome (see [Chrome Web Store](https://chrome.google.com/webstore/detail/dodmmooeoklaejobgleioelladacbeki/)), Firefox (see [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/gitpod/)) and Edge (see [how to install Chrome extensions](https://support.microsoft.com/help/4538971/microsoft-edge-add-or-remove-extensions)), and adds a **Gitpod** button to the configured GitLab, GitHub and Bitbucket installations (defaults to `gitlab.com`, `github.com` and `bitbucket.org`) which immediately creates a Gitpod workspace for the current git context:
 
