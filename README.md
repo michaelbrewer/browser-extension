@@ -41,7 +41,6 @@ data "coder_parameter" "git_repo" {
 }
 
 provider "docker" {
-  host = "unix:///Users/michaelbrewer/.docker/run/docker.sock"
 }
 
 data "coder_workspace" "me" {
@@ -215,6 +214,59 @@ resource "docker_container" "workspace" {
   labels {
     label = "coder.workspace_name"
     value = data.coder_workspace.me.name
+  }
+}
+```
+
+Support for `tree` git clone urls
+
+```terraform
+
+locals {
+  # Get the folder of the checked out project
+  folder_name = basename(can(regex("/tree/", data.coder_parameter.git_repo.value)) ? split("/tree/", data.coder_parameter.git_repo.value)[0] : data.coder_parameter.git_repo.value)
+}
+
+# Add param for the git url
+data "coder_parameter" "git_repo" {
+  name         = "git_repo"
+  display_name = "Git repository"
+  default      = "https://github.com/coder/coder"
+}
+
+resource "coder_agent" "main" {
+  arch           = data.coder_provisioner.me.arch
+  os             = "linux"
+  startup_script = <<-EOF
+    #!/bin/bash
+    set -e
+
+    # Clone repo when needed
+    url="${data.coder_parameter.git_repo.value}"
+    if [ ! -d "${local.folder_name}" ]
+    then
+      if [[ $url == *"/tree/"* ]]; then
+        repo_url=$${url%%/tree/*}
+        branch=$${url##*/tree/}
+        git clone "$repo_url.git"
+        cd "$(basename "$repo_url")"
+        git checkout $branch
+      else
+        git clone $url
+      fi
+    fi
+  EOF
+}
+
+# Open cloned project
+module "code-server" {
+  source   = "registry.coder.com/modules/code-server/coder"
+  version  = "1.0.5"
+  agent_id = coder_agent.main.id
+  folder   = "/home/${local.username}/${local.folder_name}"
+  settings = {
+    "workbench.colorTheme" : "Visual Studio Dark"
+    "workbench.startupEditor" : "readme"
   }
 }
 ```
